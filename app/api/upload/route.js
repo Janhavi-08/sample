@@ -14,29 +14,21 @@ export async function POST(req) {
     const bytes = await file.arrayBuffer();
     const buffer = Buffer.from(bytes);
 
-    // Ensure uploads folder exists
     const uploadDir = path.join(process.cwd(), "public", "uploads");
     if (!fs.existsSync(uploadDir)) {
       fs.mkdirSync(uploadDir, { recursive: true });
     }
 
-    // file name
-    const filename = `${Date.now()}-${file.name}`;
-    const filepath = path.join(uploadDir, filename);
+    const cleanName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+    const filename = `${Date.now()}-${cleanName}`;
+    const filePath = path.join(uploadDir, filename);
 
-    // Save the image
-    await fs.promises.writeFile(filepath, buffer);
-
-    // Save latest file reference
-    const jsonPath = path.join(process.cwd(), "public", "uploads", "latest.json");
-    await fs.promises.writeFile(jsonPath, JSON.stringify({ filename }, null, 2));
+    await fs.promises.writeFile(filePath, buffer);
 
     return NextResponse.json({
-      message: "Uploaded successfully",
       url: `/uploads/${filename}`,
     });
   } catch (err) {
-    console.error("UPLOAD ERROR:", err);
-    return NextResponse.json({ error: "Upload failed" }, { status: 500 });
+    return NextResponse.json({ error: err.message }, { status: 500 });
   }
 }
