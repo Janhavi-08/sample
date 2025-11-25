@@ -1,22 +1,60 @@
-import { NextResponse } from "next/server";
-import fs from "fs";
-import path from "path";
+"use client";
 
-export async function GET() {
-  try {
-    const jsonPath = path.join(process.cwd(), "public", "uploads", "latest.json");
+import { useState } from "react";
 
-    if (!fs.existsSync(jsonPath)) {
-      return NextResponse.json({ url: null });
-    }
+export default function HomePage() {
+  const [preview, setPreview] = useState(null);
+  const [uploaded, setUploaded] = useState(null);
 
-    const json = JSON.parse(fs.readFileSync(jsonPath, "utf8"));
+  async function handleUpload(e) {
+    const file = e.target.files[0];
+    if (!file) return;
 
-    return NextResponse.json({
-      url: `/uploads/${json.filename}`,
+    // Preview BEFORE uploading
+    setPreview(URL.createObjectURL(file));
+
+    const formData = new FormData();
+    formData.append("image", file);
+
+    const res = await fetch("/api/upload", {
+      method: "POST",
+      body: formData,
     });
-  } catch (err) {
-    console.error("GET LATEST ERROR:", err);
-    return NextResponse.json({ error: "Cannot read file" }, { status: 500 });
+
+    const data = await res.json();
+
+    if (data.url) {
+      setUploaded(data.url);
+    }
   }
+
+  return (
+    <div style={{ padding: "20px" }}>
+      <h2>Upload Image</h2>
+
+      {/* Upload input */}
+      <input
+        type="file"
+        accept="image/*"
+        onChange={handleUpload}
+        style={{ margin: "10px 0" }}
+      />
+
+      {/* Local preview */}
+      {preview && (
+        <div style={{ marginTop: "20px" }}>
+          <h3>New Image Preview:</h3>
+          <img src={preview} width={200} style={{ borderRadius: "8px" }} />
+        </div>
+      )}
+
+      {/* Fetched from server */}
+      {uploaded && (
+        <div style={{ marginTop: "20px" }}>
+          <h3>Uploaded Image (saved in public/uploads):</h3>
+          <img src={uploaded} width={200} style={{ borderRadius: "8px" }} />
+        </div>
+      )}
+    </div>
+  );
 }
