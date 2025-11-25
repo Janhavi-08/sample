@@ -4,31 +4,34 @@ import path from "path";
 
 export async function POST(req) {
   try {
-    const formData = await req.formData();
-    const file = formData.get("image");
+    const form = await req.formData();
+    const file = form.get("image");
 
     if (!file) {
-      return NextResponse.json({ error: "No file uploaded" }, { status: 400 });
+      return NextResponse.json({ error: "No file found" }, { status: 400 });
     }
 
-    const bytes = await file.arrayBuffer();
-    const buffer = Buffer.from(bytes);
+    const bytes = Buffer.from(await file.arrayBuffer());
+
+    const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+    const filename = `${Date.now()}-${safeName}`;
 
     const uploadDir = path.join(process.cwd(), "public", "uploads");
+
     if (!fs.existsSync(uploadDir)) {
       fs.mkdirSync(uploadDir, { recursive: true });
     }
 
-    const cleanName = file.name.replace(/[^a-zA-Z0-9._-]/g, "_");
-    const filename = `${Date.now()}-${cleanName}`;
-    const filePath = path.join(uploadDir, filename);
+    const uploadPath = path.join(uploadDir, filename);
 
-    await fs.promises.writeFile(filePath, buffer);
+    fs.writeFileSync(uploadPath, bytes);
 
     return NextResponse.json({
-      url: `/uploads/${filename}`,
+      url: `/uploads/${filename}`, // This will be handled by GET route
+      filename,
     });
   } catch (err) {
-    return NextResponse.json({ error: err.message }, { status: 500 });
+    console.error("UPLOAD ERROR:", err);
+    return NextResponse.json({ error: String(err) }, { status: 500 });
   }
 }
