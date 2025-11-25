@@ -2,15 +2,24 @@
 import { useState } from "react";
 
 export default function Home() {
-  const [preview, setPreview] = useState(null);   // local preview before upload
-  const [uploaded, setUploaded] = useState(null); // image saved in /uploads/
+  const [file, setFile] = useState(null);        // local file object
+  const [preview, setPreview] = useState(null);  // preview before upload
+  const [uploaded, setUploaded] = useState(null); // image fetched from backend
 
-  async function handleUpload(e) {
-    const file = e.target.files[0];
-    if (!file) return;
+  function handleFileChange(e) {
+    const selected = e.target.files[0];
+    if (!selected) return;
 
-    // Show preview before uploading
-    setPreview(URL.createObjectURL(file));
+    setFile(selected);
+    setPreview(URL.createObjectURL(selected)); // show instant preview
+  }
+
+  // SAVE (Upload to backend)
+  async function handleSave() {
+    if (!file) {
+      alert("Please select an image first");
+      return;
+    }
 
     const formData = new FormData();
     formData.append("image", file);
@@ -22,7 +31,17 @@ export default function Home() {
 
     const data = await res.json();
 
-    // success → show uploaded file from server
+    if (data.url) {
+      alert("Image uploaded successfully");
+      setUploaded(data.url); // update uploaded section
+    }
+  }
+
+  // FETCH saved image (GET request)
+  async function handleFetch() {
+    const res = await fetch("/api/get-latest");
+    const data = await res.json();
+
     if (data.url) {
       setUploaded(data.url);
     }
@@ -33,14 +52,14 @@ export default function Home() {
       <h2>Upload Image</h2>
 
       {/* Upload button */}
-      <input 
-        type="file" 
-        accept="image/*" 
-        onChange={handleUpload}
+      <input
+        type="file"
+        accept="image/*"
+        onChange={handleFileChange}
         style={{ margin: "10px 0" }}
       />
 
-      {/* Preview new image BEFORE upload */}
+      {/* Show preview BEFORE saving */}
       {preview && (
         <div style={{ marginTop: "20px" }}>
           <h3>New Image Preview:</h3>
@@ -48,10 +67,38 @@ export default function Home() {
         </div>
       )}
 
-      {/* Show uploaded image served from public/uploads */}
+      {/* SAVE button */}
+      <button
+        onClick={handleSave}
+        style={{
+          marginTop: "20px",
+          padding: "8px 20px",
+          background: "black",
+          color: "white",
+          borderRadius: "6px",
+        }}
+      >
+        Save Image
+      </button>
+
+      {/* FETCH button */}
+      <button
+        onClick={handleFetch}
+        style={{
+          marginLeft: "10px",
+          padding: "8px 20px",
+          background: "#555",
+          color: "white",
+          borderRadius: "6px",
+        }}
+      >
+        Fetch Saved Image
+      </button>
+
+      {/* Show uploaded (saved) image */}
       {uploaded && (
         <div style={{ marginTop: "20px" }}>
-          <h3>Uploaded Image (from server):</h3>
+          <h3>Saved Image (from server):</h3>
           <img src={uploaded} width={200} style={{ borderRadius: "8px" }} />
         </div>
       )}
